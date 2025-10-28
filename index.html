@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Midcentury Modern Home Finder - Census Data + Maps</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .tagline {
+            color: #666;
+            font-size: 1.2em;
+            margin-bottom: 20px;
+        }
+
+        .badges {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+
+        .badge-census {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .badge-map {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .badge-live {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            color: white;
+        }
+
+        .search-section {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        select, input {
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .search-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1em;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s;
+            width: 100%;
+        }
+
+        .search-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .search-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        #map {
+            height: 500px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 25px;
+        }
+
+        .neighborhood-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+        }
+
+        .neighborhood-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+        }
+
+        .card-title {
+            font-size: 1.5em;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .card-subtitle {
+            opacity: 0.9;
+            font-size: 1em;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .stat-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .stat-label {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-weight: 700;
+            color: #333;
+        }
+
+        .percentage-bar {
+            background: #f0f0f0;
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .percentage-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.5s ease;
+        }
+
+        .stats-summary {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .summary-stat {
+            text-align: center;
+        }
+
+        .summary-number {
+            font-size: 2.5em;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .summary-label {
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+            font-size: 1.2em;
+        }
+
+        .error {
+            background: #fee;
+            border: 2px solid #fcc;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            color: #c33;
+        }
+
+        .api-key-section {
+            background: #fffbea;
+            border: 2px solid #f7c948;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .api-key-section h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .api-key-section input {
+            width: 100%;
+            max-width: 500px;
+            margin-top: 10px;
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+
+        .premium-badge-card {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8em;
+            }
+            
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+
+            #map {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏠 Midcentury Modern Home Finder</h1>
+            <p class="tagline">Discover neighborhoods with authentic 1950s architecture using US Census data</p>
+            <div class="badges">
+                <span class="badge badge-census">Live Census Data</span>
+                <span class="badge badge-map">Interactive Maps</span>
+                <span class="badge badge-live">Real-Time Updates</span>
+            </div>
+        </header>
+
+        <div class="api-key-section">
+            <h3>📋 Setup Required</h3>
+            <p>To use real Census data, you need a free API key. Get yours at: <a href="https://api.census.gov/data/key_signup.html" target="_blank">https://api.census.gov/data/key_signup.html</a></p>
+            <input type="text" id="census-api-key" placeholder="Enter your Census API key here (optional - demo data works without it)">
+        </div>
+
+        <div class="info-box">
+            <strong>📍 How it works:</strong> This app uses the Census Bureau's American Community Survey (ACS) table B25034 to find neighborhoods where a high percentage of homes were built between 1950-1959 (the peak of midcentury modern architecture). The map shows these neighborhoods, and you can click on markers to see details.
+        </div>
+
+        <div class="search-section">
+            <div class="filter-grid">
+                <div class="filter-group">
+                    <label for="state-select">State</label>
+                    <select id="state-select">
+                        <option value="06">California</option>
+                        <option value="04">Arizona</option>
+                        <option value="32">Nevada</option>
+                        <option value="08">Colorado</option>
+                        <option value="48">Texas</option>
+                        <option value="12">Florida</option>
+                        <option value="41">Oregon</option>
+                        <option value="53">Washington</option>
+                        <option value="13">Georgia</option>
+                        <option value="35">New Mexico</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="min-percentage">Min % 1950s Homes</label>
+                    <input type="number" id="min-percentage" value="20" min="0" max="100">
+                </div>
+
+                <div class="filter-group">
+                    <label for="sort-by">Sort By</label>
+                    <select id="sort-by">
+                        <option value="percentage">% of 1950s Homes</option>
+                        <option value="total">Total 1950s Homes</option>
+                        <option value="name">County Name</option>
+                    </select>
+                </div>
+            </div>
+
+            <button class="search-btn" id="search-btn" onclick="searchNeighborhoods()">
+                🔍 Search Census Data
+            </button>
+        </div>
+
+        <div id="error" class="error" style="display: none;"></div>
+        <div id="loading" class="loading" style="display: none;">
+            Fetching Census data...
+        </div>
+
+        <div id="stats-summary" class="stats-summary" style="display: none;">
+            <div class="summary-stat">
+                <div class="summary-number" id="total-neighborhoods">0</div>
+                <div class="summary-label">Counties Found</div>
+            </div>
+            <div class="summary-stat">
+                <div class="summary-number" id="total-homes">0</div>
+                <div class="summary-label">Total 1950s Homes</div>
+            </div>
+            <div class="summary-stat">
+                <div class="summary-number" id="avg-percentage">0%</div>
+                <div class="summary-label">Average MCM %</div>
+            </div>
+        </div>
+
+        <div id="map"></div>
+
+        <div id="results" class="results-grid"></div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script>
+        // Initialize markers array first
+        let markers = [];
+        
+        // Initialize map
+        let map = L.map('map').setView([37.0902, -95.7129], 4); // Center of US
+        
+        // Add OpenStreetMap tiles (free!)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 18
+        }).addTo(map);
+
+        // Census B25034 variable codes for "Year Structure Built"
+        // B25034_006E = Built 1950 to 1959
+        // B25034_001E = Total housing units
+        const CENSUS_VARIABLES = 'NAME,B25034_006E,B25034_001E';
+        
+        // State FIPS codes
+        const STATE_NAMES = {
+            '01': 'Alabama', '02': 'Alaska', '04': 'Arizona', '05': 'Arkansas',
+            '06': 'California', '08': 'Colorado', '09': 'Connecticut', '10': 'Delaware',
+            '12': 'Florida', '13': 'Georgia', '15': 'Hawaii', '16': 'Idaho',
+            '17': 'Illinois', '18': 'Indiana', '19': 'Iowa', '20': 'Kansas',
+            '21': 'Kentucky', '22': 'Louisiana', '23': 'Maine', '24': 'Maryland',
+            '25': 'Massachusetts', '26': 'Michigan', '27': 'Minnesota', '28': 'Mississippi',
+            '29': 'Missouri', '30': 'Montana', '31': 'Nebraska', '32': 'Nevada',
+            '33': 'New Hampshire', '34': 'New Jersey', '35': 'New Mexico', '36': 'New York',
+            '37': 'North Carolina', '38': 'North Dakota', '39': 'Ohio', '40': 'Oklahoma',
+            '41': 'Oregon', '42': 'Pennsylvania', '44': 'Rhode Island', '45': 'South Carolina',
+            '46': 'South Dakota', '47': 'Tennessee', '48': 'Texas', '49': 'Utah',
+            '50': 'Vermont', '51': 'Virginia', '53': 'Washington', '54': 'West Virginia',
+            '55': 'Wisconsin', '56': 'Wyoming'
+        };
+
+        // Approximate county coordinates (major MCM hotspots)
+        const COUNTY_COORDS = {
+            'San Diego County': [32.7157, -117.1611],
+            'Los Angeles County': [34.0522, -118.2437],
+            'Orange County': [33.7175, -117.8311],
+            'Riverside County': [33.7537, -116.0059],
+            'Maricopa County': [33.4484, -112.0740],
+            'Clark County': [36.1699, -115.1398],
+            'Denver County': [39.7392, -104.9903],
+            'Washoe County': [39.5296, -119.8138],
+            'Multnomah County': [45.5152, -122.6784],
+            'King County': [47.6062, -122.3321],
+            'Travis County': [30.2672, -97.7431],
+            'Harris County': [29.7604, -95.3698],
+            'Dallas County': [32.7767, -96.7970],
+            'Tarrant County': [32.7555, -97.3308],
+            'Fulton County': [33.7490, -84.3880],
+            'Bernalillo County': [35.0844, -106.6504],
+            'Miami-Dade County': [25.7617, -80.1918],
+            'Broward County': [26.1224, -80.1373],
+            'Palm Beach County': [26.7153, -80.0534]
+        };
+
+        async function searchNeighborhoods() {
+            const apiKey = document.getElementById('census-api-key').value.trim();
+            const stateFips = document.getElementById('state-select').value;
+            const minPercentage = parseFloat(document.getElementById('min-percentage').value) || 0;
+            const sortBy = document.getElementById('sort-by').value;
+
+            // Clear previous results
+            clearMap();
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('error').style.display = 'none';
+            document.getElementById('stats-summary').style.display = 'none';
+
+            // Show loading
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('search-btn').disabled = true;
+
+            try {
+                let data;
+                
+                if (apiKey) {
+                    // Use real Census API
+                    const apiUrl = `https://api.census.gov/data/2022/acs/acs5?get=${CENSUS_VARIABLES}&for=county:*&in=state:${stateFips}&key=${apiKey}`;
+                    const response = await fetch(apiUrl);
+                    
+                    if (!response.ok) {
+                        throw new Error(`Census API error: ${response.status}`);
+                    }
+                    
+                    const rawData = await response.json();
+                    data = processCensusData(rawData, stateFips);
+                } else {
+                    // Use demo data
+                    data = getDemoData(stateFips);
+                }
+
+                // Filter and sort
+                data = data.filter(county => {
+                    const percentage = (county.mcmHomes / county.totalHomes) * 100;
+                    return percentage >= minPercentage;
+                });
+
+                data.sort((a, b) => {
+                    if (sortBy === 'percentage') {
+                        return (b.mcmHomes / b.totalHomes) - (a.mcmHomes / a.totalHomes);
+                    } else if (sortBy === 'total') {
+                        return b.mcmHomes - a.mcmHomes;
+                    } else {
+                        return a.name.localeCompare(b.name);
+                    }
+                });
+
+                // Update statistics
+                updateStatistics(data);
+
+                // Display results
+                displayResults(data);
+
+                // Add markers to map
+                addMarkersToMap(data);
+
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('error').textContent = `Error: ${error.message}. ${!apiKey ? 'Using demo data instead.' : 'Please check your API key.'}`;
+                document.getElementById('error').style.display = 'block';
+                
+                // Fall back to demo data
+                const data = getDemoData(document.getElementById('state-select').value);
+                displayResults(data);
+                addMarkersToMap(data);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('search-btn').disabled = false;
+            }
+        }
+
+        function processCensusData(rawData, stateFips) {
+            // First row is headers
+            const headers = rawData[0];
+            const rows = rawData.slice(1);
+            
+            return rows.map(row => {
+                const mcmHomes = parseInt(row[1]) || 0;
+                const totalHomes = parseInt(row[2]) || 0;
+                const countyFips = row[4];
+                const countyName = row[0];
+                
+                return {
+                    name: countyName,
+                    state: STATE_NAMES[stateFips],
+                    mcmHomes: mcmHomes,
+                    totalHomes: totalHomes,
+                    fips: stateFips + countyFips
+                };
+            });
+        }
+
+        function getDemoData(stateFips) {
+            const stateName = STATE_NAMES[stateFips];
+            
+            // Demo data based on actual patterns (California shown as example)
+            const demoData = {
+                '06': [ // California
+                    { name: 'Los Angeles County', mcmHomes: 245000, totalHomes: 890000 },
+                    { name: 'San Diego County', mcmHomes: 98000, totalHomes: 425000 },
+                    { name: 'Orange County', mcmHomes: 125000, totalHomes: 380000 },
+                    { name: 'Riverside County', mcmHomes: 67000, totalHomes: 312000 },
+                    { name: 'San Bernardino County', mcmHomes: 54000, totalHomes: 289000 }
+                ],
+                '04': [ // Arizona
+                    { name: 'Maricopa County', mcmHomes: 156000, totalHomes: 520000 },
+                    { name: 'Pima County', mcmHomes: 45000, totalHomes: 178000 }
+                ],
+                '32': [ // Nevada
+                    { name: 'Clark County', mcmHomes: 89000, totalHomes: 295000 },
+                    { name: 'Washoe County', mcmHomes: 23000, totalHomes: 98000 }
+                ]
+            };
+
+            const counties = demoData[stateFips] || [];
+            return counties.map(county => ({
+                ...county,
+                state: stateName,
+                fips: stateFips + '000'
+            }));
+        }
+
+        function updateStatistics(data) {
+            const totalHomes = data.reduce((sum, county) => sum + county.mcmHomes, 0);
+            const avgPercentage = data.length > 0 
+                ? (data.reduce((sum, county) => sum + (county.mcmHomes / county.totalHomes * 100), 0) / data.length).toFixed(1)
+                : 0;
+
+            document.getElementById('total-neighborhoods').textContent = data.length;
+            document.getElementById('total-homes').textContent = totalHomes.toLocaleString();
+            document.getElementById('avg-percentage').textContent = avgPercentage + '%';
+            document.getElementById('stats-summary').style.display = data.length > 0 ? 'grid' : 'none';
+        }
+
+        function displayResults(data) {
+            const resultsDiv = document.getElementById('results');
+            
+            if (data.length === 0) {
+                resultsDiv.innerHTML = '<div style="background: white; padding: 60px; border-radius: 15px; text-align: center; color: #666;">No counties found matching your criteria. Try adjusting the filters.</div>';
+                return;
+            }
+
+            resultsDiv.innerHTML = data.map(county => {
+                const percentage = ((county.mcmHomes / county.totalHomes) * 100).toFixed(1);
+                
+                return `
+                    <div class="neighborhood-card" onclick="focusOnMap('${county.name}')">
+                        <div class="card-header">
+                            <div class="card-title">${county.name}</div>
+                            <div class="card-subtitle">${county.state}</div>
+                        </div>
+                        <div class="card-body">
+                            <div class="stat-row">
+                                <span class="stat-label">1950s Homes</span>
+                                <span class="stat-value">${percentage}%</span>
+                            </div>
+                            <div class="percentage-bar">
+                                <div class="percentage-fill" style="width: ${Math.min(percentage, 100)}%"></div>
+                            </div>
+                            
+                            <div class="stat-row" style="margin-top: 15px;">
+                                <span class="stat-label">Total MCM Homes</span>
+                                <span class="stat-value">${county.mcmHomes.toLocaleString()}</span>
+                            </div>
+                            
+                            <div class="stat-row">
+                                <span class="stat-label">Total Housing Units</span>
+                                <span class="stat-value">${county.totalHomes.toLocaleString()}</span>
+                            </div>
+
+                            <div class="premium-badge-card">
+                                <strong>💎 Coming Soon: Real Listings</strong>
+                                <p style="margin-top: 5px; font-size: 0.9em;">
+                                    MLS integration for active MCM listings in this area
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function addMarkersToMap(data) {
+            clearMap();
+            
+            // Adjust map bounds
+            const bounds = [];
+            
+            data.forEach(county => {
+                const coords = COUNTY_COORDS[county.name];
+                if (coords) {
+                    const percentage = ((county.mcmHomes / county.totalHomes) * 100).toFixed(1);
+                    
+                    const marker = L.marker(coords).addTo(map);
+                    marker.bindPopup(`
+                        <strong>${county.name}</strong><br>
+                        ${county.state}<br>
+                        <strong>${percentage}%</strong> built 1950-1959<br>
+                        ${county.mcmHomes.toLocaleString()} MCM homes
+                    `);
+                    
+                    markers.push(marker);
+                    bounds.push(coords);
+                }
+            });
+
+            // Fit map to show all markers
+            if (bounds.length > 0) {
+                map.fitBounds(bounds, { padding: [50, 50] });
+            }
+        }
+
+        function clearMap() {
+            markers.forEach(marker => marker.remove());
+            markers = [];
+        }
+
+        function focusOnMap(countyName) {
+            const coords = COUNTY_COORDS[countyName];
+            if (coords) {
+                map.setView(coords, 10);
+                
+                // Find and open popup for this marker
+                markers.forEach(marker => {
+                    if (marker.getLatLng().lat === coords[0] && marker.getLatLng().lng === coords[1]) {
+                        marker.openPopup();
+                    }
+                });
+                
+                // Scroll to map
+                document.getElementById('map').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        // Initial load
+        window.onload = () => {
+            searchNeighborhoods();
+        };
+    </script>
+</body>
+</html>
